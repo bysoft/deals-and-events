@@ -1,0 +1,159 @@
+<!DOCTYPE HTML>
+<html lang="en-US">
+<head>
+    <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DealingWith.us</title>
+    <link rel="stylesheet" href="jquery-ui.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="overlay" style="display: none"></div>
+    <div class="header"><div class="logo"></div> </div>
+<div id="page-wrap">
+    <form id="create-event" style="display: none">
+        <label for="event-name">Event Name</label>
+        <input id="event-name" type="text"><br/>
+        <label for="event-date">Date</label>
+        <input type="text" id="event-date"><br/>
+        <label for="event-time">Time</label>
+        <input id="event-time" />
+			<br/>
+        <label for="event-desc">Description</label>
+        <textarea type="text" id="event-desc"></textarea>
+        <button class="create">create</button>
+    </form>
+    <h2>Deals In Your Area</h2>
+    <div id="accordion" class="ui-accordion ui-widget ui-helper-reset">
+    </div>
+</div>
+<script type="text/javascript" src="http://code.jquery.com/jquery-1.7.min.js"></script>
+<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.8.16/jquery-ui.min.js"></script>
+<script src=jquery-ui-timepicker-addon.js></script>
+<script type="text/javascript">
+    var DEALMEET = (function(){
+        var dealmeet = {};
+        dealmeet.app = {
+            init:function(){
+                dealmeet.app.list.show();
+                dealmeet.app.lightbox.event();
+                dealmeet.app.ui.accordionTimer();
+				dealmeet.app.ui.timepicker();
+            },
+            list:{
+                show: function(){
+                    var jsonData = 'http://api.yipit.com/v1/deals/?key=SyfdMvpxgqA8tmSm&division=new-york';
+                    var jsonData = 'ny-deals.json';
+
+                    $.getJSON(jsonData, function(json) {
+                        console.log(json)
+                        $(json.response.deals).each(function(){
+//                            $('#accordion').append('<li><img height="50" src="' + this.images.image_small + '" alt="">'
+//                                    + this.yipit_title + '<strong>' + this.price.formatted + '</strong></li><button>create meetup</button>');
+                            var deal_title = this.title;
+                            var yip_deal_title = this.yipit_title;
+                            var deal_price = this.price.formatted;
+                            var deal_sm_image = this.images.image_small;
+                            var deal_address = this.business.locations[0];
+                            var deal_date = this.date_added;
+                            if (deal_address){
+                                var deal_address = this.business.locations[0].address;
+                            }
+                            else {
+                                var deal_address = '';
+                            }
+
+                            $('#accordion').append('<h3 class="ui-accordion-header ui-helper-reset ui-state-default ui-' +
+                                    'corner-all"><img height="50" src="'+ deal_sm_image + '" alt=""><a href="#">' + deal_title +
+                                    '</a><strong>' + deal_price + '</strong></h3><div class="ui-accordion-content ' +
+                                    'ui-helper-reset ui-widget-content ui-corner-bottom"><span class=yip_deal_title>' + yip_deal_title + '</span><div class="address">'
+                                    + deal_address + '</div><div class="event-date">'+ deal_date+'</div>' +
+                                    '<button>create meetup</button><span style=display:none class=deal_title>' + deal_title + '</span></div>');
+                        })
+                    });
+                }
+            },
+            lightbox:{
+                event:function(){
+                    $('#accordion button').live('click',function(){
+						$("html, body").animate({ scrollTop: 0 }, "slow");
+                        $('#overlay').fadeIn();
+                        $('form').fadeIn();
+                        var thisPrevVal = $(this).parent().prev().children().text();
+                        var $dateVal = $(this).prev().text();
+                        var $dealTitle = $(this).prev().prev().prev().text();
+                        var $yipDealTitle = $(this).next().text();
+                        console.log($yipDealTitle)
+                        $('form #event-name').val($dealTitle);
+                        $('form #event-desc').val($yipDealTitle);
+//                        $('form #event-date').val($dateVal);
+                    })
+                    $('#overlay').live('click',function(){
+                        $(this).hide();
+                        $('form').hide();
+                    })
+                    $('#create-event button').live('click',function(e){
+//                        alert('btn clicked')
+                        dealmeet.app.lightbox.formSubmit()
+                        e.preventDefault()
+                    })
+                    $('form').submit(function(){
+                        return false;
+                    })
+                },
+				callback: function(){
+					var confirmation = $('<h1>Thats it! You just landed a sick deal with a bunch of randoms to hang with. Enjoy :D</h1>');
+					var $peopleImages = '<div id=people-images></div>';
+                    var $eventTitle = '<em>' + $('#event-name').val() + '</em>';
+                    var $yipDealTitle = '<p>' + $('#event-desc').val() + '</p>';					
+					$('#create-event').empty().addClass('confirmation');
+					$('#create-event').append($peopleImages).append(confirmation).append($eventTitle).append($yipDealTitle);
+				},
+                formSubmit:function(){
+//                    alert('form submit')
+					var loader = '<img id=loader style=float:right src=images/5-1.gif />';
+					$('#create-event').prepend(loader);
+
+                    var $eventTitle = $('#event-name').val();
+                    var $yipDealTitle = $('#event-desc').val();
+                    console.log($eventTitle)
+
+                    $.ajax({
+                        type: "POST",
+                        url: 'create-event.php?short_description=' + $eventTitle + '&yip_deal_title=' + $yipDealTitle
+//                        data: "?short_description=EventName&link=google.com"
+                    }).done(function(msg) {
+//                                alert("Data Saved: " + msg);
+//                                alert('done saved');	
+								DEALMEET.lightbox.callback($eventTitle, $yipDealTitle);
+                            });
+                }
+            },
+            ui:{
+                accordionTimer: function(){
+
+                },
+                accordion: function(){
+                    $('#accordion').accordion();
+                },
+                datepicker:function(){
+                    $( "#event-date" ).datepicker();
+                },
+				timepicker:function(){
+					$('#event-time').timepicker({})
+				}
+            }
+        }
+        dealmeet.app.init();
+        return dealmeet.app;
+    }())
+    function testFunc(){
+        DEALMEET.ui.accordion();
+        DEALMEET.ui.datepicker();
+    }
+    setTimeout(testFunc, 1000)
+
+</script>
+<div class="footer"><center>©2011 dealingwithus</center></div>
+</body>
+</html>
